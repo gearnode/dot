@@ -4,7 +4,7 @@ This repository contains my personnal computer configuration.
 # Usage
 You can patch the system with:
 
-    dot patch
+    dot patch /home/john/mycfg.dot
 
 You list available commands with:
 
