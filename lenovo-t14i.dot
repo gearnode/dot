@@ -1,0 +1,139 @@
+dot_pacman_install ca-certificates
+
+#
+# Server X
+#
+dot_pacman_install xorg-server
+dot_pacman_install xbindkeys
+dot_pacman_install xorg-xbacklight
+dot_pacman_install noto-fonts
+dot_pacman_install i3-wm
+dot_mkdir /.config/i3
+dot_install i3config /home/gearnode/.config/i3/config
+dot_install xinitrc /home/gearnode/.xinitrc
+dot_install xbindkeysrc /home/gearnode/.xbindkeysrc
+dot_install Xdefaults /home/gearnode/.Xdefaults
+
+#
+# Audio
+#
+dot_pacman_install pavucontrol
+dot_pacman_install sof-firmware
+
+#
+# Network
+#
+dot_pacman_install net-tools
+dot_pacman_install networkmanager
+
+#
+# OpenSSH
+#
+dot_pacman_install openssh
+dot_mkdir -m 0700 -o gearnode -g gearnode /home/gearnode/.ssh
+dot_install ssh/config /home/gearnode/.ssh/config
+
+#
+# Git
+#
+dot_pacman_install git
+dot_install gitconfig /home/gearnode/.gitconfig
+dot_install gitignore /home/gearnode/.gitignore
+
+#
+# ZSH
+#
+dot_pacman_install zsh
+dot_pacman_install zsh-completions
+dot_pacman_install fzf
+dot_install zshrc /home/gearnode/.zshrc
+dot_chsh /usr/bin/zsh gearnode
+
+#
+# cURL
+#
+dot_pacman_install curl
+dot_install curlrc /home/gearnode/.curlrc
+
+# Ag
+dot_pacman_install the_silver_searcher
+dot_install agignore /home/gearnode/.agignore
+
+#
+# VIM
+#
+dot_pacman_install vim
+# TODO: install vim configuration
+
+#
+# Emacs
+#
+dot_pacman_install emacs
+# TODO: install emacs configuration
+
+#
+# Mutt
+#
+dot_pacman_install mutt
+dot_pacman_install lynx
+# TODO: install mutt configuration
+
+#
+# Go
+#
+dot_pacman_install go
+dot_go_install github.com/jobteaser/privatebin
+
+#
+# Ruby
+#
+dot_pacman_install ruby
+dot_install irbrc /home/gearnode/.irbrc
+
+#
+# Erlang
+#
+dot_pacman_install erlang
+
+#
+# Python3
+#
+dot_pacman_install python3
+
+#
+# HTOP
+#
+dot_pacman_install htop
+dot_mkdir /home/gearnode/.config/htop
+dot_install htoprc /home/gearnode/.config/htop/htoprc
+
+#
+# Wireshark
+#
+dot_pacman_install wireshark-qt
+dot_pacman_install wireshark-cli
+dot_pacman_install mitmproxy
+
+dot_pacman_install openssl
+dot_pacman_install bat
+dot_pacman_install unzip
+dot_pacman_install jq
+dot_pacman_install wget
+
+dot_pacman_install firefox
+dot_pacman_install docker
+dot_pacman_install ctags
+dot_pacman_install sqlite
+dot_pacman_install make
+dot_pacman_install feh
+dot_pacman_install tree
+dot_pacman_install bc
+dot_pacman_install tarsnap
+
+dot_pacman_install postgresql
+dot_pacman_install redis
+
+#
+# 1Password
+#
+dot_install_1password 1.4.0
