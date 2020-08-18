@@ -1,0 +1,34 @@
+#!/bin/sh
+
+set -eu
+
+usage() {
+    cat <<EOF
+usage: dot <command>
+
+Commands:
+patch       install package and links dotfiles
+screen      preset xrandr
+help        show help message
+EOF
+}
+
+command="help"
+if [ $# -ge 1 ]; then
+    command="$1"
+    shift
+fi
+
+case "$command" in
+    "patch" | "screen")
+        $(dirname $(realpath $0))/dot-$command $@
+        ;;
+    "help")
+        usage
+        exit 0
+        ;;
+    *)
+        echo "invalid command '$command'; type help for a list" > /dev/stderr
+        exit 1
+        ;;
+esac

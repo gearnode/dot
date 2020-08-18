@@ -1,0 +1,50 @@
+#!/bin/sh
+
+set -eu
+
+usage() {
+    cat <<EOF
+usage: $0 <mode>
+
+OPTIONS
+-l      list available modes
+-h      show help message
+EOF
+}
+
+while getopts 'hl' arg; do
+    case "$arg" in
+        h)
+            usage
+            exit 0
+            ;;
+        l)
+            printf "free\ndesk\n"
+            exit 0
+            ;;
+        ?)
+            echo "unkown option" > /dev/stderr
+            exit 1
+            ;;
+    esac
+done
+
+if [ $# -lt 1 ]; then
+    echo "missing argument" > /dev/stderr
+    exit 1
+fi
+mode="$1"
+
+case "$mode" in
+    "free")
+        xrandr --output eDP1 --dpi 300 --mode 3840x2160 --scale 1x1
+        ;;
+    "desk")
+        xrandr --output HDMI2 --dpi 200 --scale 2x2 --mode 2560x1440
+        xrandr --output eDP1 --off
+        ;;
+    *)
+        echo "invalid mode '$mode'; type -l for a list" > /dev/stderr
+        exit 1
+        ;;
+esac

@@ -1,0 +1,428 @@
+#!/bin/sh
+
+usage() {
+    cat <<EOF
+usage: $0
+
+OPTIONS
+-h      show help message
+EOF
+}
+
+while getopts 'h' arg; do
+    case "$arg" in
+        h)
+            usage
+            exit 0
+            ;;
+        ?)
+            echo "unkown option" > /dev/stderr
+            exit 1
+            ;;
+    esac
+done
+
+dot_log() {
+    local fd args
+
+    fd="$1"
+    shift
+    args="$*"
+
+    printf ">> %b\n" "$args" > $fd
+}
+
+dot_fatal() {
+    dot_log /dev/stderr "[error] \033[31m$*\033[0m"
+    exit 1
+}
+
+dot_trace() {
+    dot_log /dev/stdout "[trace] $*"
+}
+
+dot_notice() {
+    dot_log /dev/stdout "[notice] \033[33m$*\033[0m"
+}
+
+
+dot_pacman_install() {
+    if [ $# -lt 1 ]; then
+        dot_fatal "missing argument"
+    fi
+
+    local package_name
+    package_name="$1"
+
+    pacman --query "$package_name" > /dev/null
+    if [ $? -ne 0 ]; then
+        dot_trace "installing '$package_name' package"
+
+        pacman --sync --noconfirm --noprogressbar "$package_name" > /dev/null
+        if [ $? -ne 0 ]; then
+            dot_fatal "cannot install '$package_name'"
+        fi
+    fi
+}
+
+dot_file_checksum() {
+    if [ $# -lt 1 ]; then
+        dot_fatal "missing argument"
+    fi
+
+    local file
+    file="$1"
+
+    md5sum "$file" | cut -f 1 -d " "
+}
+
+dot_files_identical() {
+    if [ $# -lt 2 ]; then
+        dot_fatal "missing argument(s)"
+    fi
+
+    local f1 f2 ck1 ck2
+    f1="$1"
+    f2="$2"
+
+    ck1=""
+    if [ -f "$f1" ]; then
+        ck1=$(dot_file_checksum "$f1")
+    fi
+
+    ck2=""
+    if [ -f "$f2" ]; then
+        ck2=$(dot_file_checksum "$f2")
+    fi
+
+    if [ "$ck1" = "$ck2" ]; then
+        echo "1"
+    fi
+}
+
+dot_install() {
+    local owner group mode
+
+    group="wheel"
+    mode=0644
+    owner="gearnode"
+
+    OPTIND=1
+    while getopts 'g:m:o:' arg; do
+        case "$arg" in
+            g) group="$OPTARG" ;;
+            m) mode="$OPTARG" ;;
+            o) owner="$OPTARG" ;;
+            ?) dot_fatal "unknown option" ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+
+    if [ $# -lt 2 ]; then
+        dot_fatal "missing argument(s)"
+    fi
+
+    local file destination path
+    file="$1"
+    destination="$2"
+
+    if [ "$file" = "${file#/}" ]; then
+        # relative path
+        if [ -f "$(dirname $(realpath $0))/../data/$file" ]; then
+            path="$(dirname $(realpath $0))/../data/$file"
+        else
+            dot_fatal "file '$file' not found in data directory"
+        fi
+    else
+        if [ -f "$file" ]; then
+            path="$file"
+        else
+            dot_fatal "file '$file' not found"
+        fi
+    fi
+
+    if [ $(dot_files_identical $path $destination) ]; then
+        chown $owner:$group $destination
+        if [ $? -ne 0 ]; then
+            dot_fatal "cannot set owner of '$destination'"
+        fi
+
+        chmod $mode $destination
+        if [ $? -ne 0 ]; then
+            dot_fatal "cannot set permissions of '$destination'"
+        fi
+    else
+        dot_trace "installing '$file' as '$destination'"
+        install \
+            -T \
+            -o $owner \
+            -g $group \
+            -m $mode \
+            $path $destination
+
+        if [ $? -ne 0 ]; then
+            dot_fatal "cannot install '$file' as '$destination'"
+        fi
+    fi
+}
+
+dot_mkdir() {
+    local owner group mode
+    owner=gearnode
+    mode=0755
+    group=wheel
+
+    OPTIND=1
+    while getopts 'g:m:o:' arg; do
+        case "$arg" in
+            g) group="$OPTARG" ;;
+            m) mode="$OPTARG" ;;
+            o) owner="$OPTARG" ;;
+            ?) dot_fatal "unkown option" ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+
+    if [ $# -lt 1 ]; then
+        dot_fatal "missing argument"
+    fi
+
+    local dir
+    dir="$1"
+
+    if [ ! -d "$dir" ]; then
+        dot_trace "creating directory '$dir'"
+
+        mkdir -p "$dir"
+        if [ $? -ne 0 ]; then
+            dot_fatal "cannot create directory '$dir'"
+        fi
+    fi
+
+    chown $owner:$group "$dir"
+    if [ $? -ne 0 ]; then
+        dot_fatal "cannot set owner of '$dir'"
+    fi
+
+    chmod $mode "$dir"
+    if [ $? -ne 0 ]; then
+        dot_fatal "cannot set permissions of '$dir'"
+    fi
+}
+
+dot_chsh() {
+    if [ $# -lt 2 ]; then
+        dot_fatal "missing argument(s)"
+    fi
+
+    local shell user
+    shell="$1"
+    user="$2"
+
+    if [ "$(getent passwd $user | cut -d: -f 7)" != "$shell" ]; then
+        dot_trace "changing default shell to '$shell' for '$user' user"
+
+        chsh -l "$shell" "$user"
+        if [ $? -ne 0 ]; then
+            dot_fatal "cannot change shell to '$shell' for '$user' user"
+        fi
+    fi
+}
+
+dot_go_install() {
+    if [ $# -lt 1 ]; then
+        dot_fatal "missing argument"
+    fi
+
+    local pkg bin
+    pkg="$1"
+    bin=$(basename $pkg)
+
+    command -v $bin > /dev/null
+    if [ $? -ne 0 ]; then
+        dot_trace "installing '$pkg' go package"
+
+        go get -u "$pkg"
+        if [ $? -ne 0 ]; then
+            dot_fatal "cannot install '$pkg' go package"
+        fi
+    fi
+}
+
+dot_install_1password() {
+    if [ $# -lt 1 ]; then
+        dot_fatal "missing argument"
+    fi
+
+    local version
+    version="$1"
+
+    command -v op > /dev/null
+    if [ $? -ne 0 -o "$(op --version)" != "$version" ]; then
+        dot_trace "installing '1password' package"
+
+        local dir
+        dir=$(mktemp -d)
+
+        curl \
+            --silent \
+            --output $dir/op.zip \
+            https://cache.agilebits.com/dist/1P/op/pkg/v$version/op_linux_amd64_v$version.zip
+
+        if [ $? -ne 0 ]; then
+            dot_fatal "cannot download 1password cli zip package"
+        fi
+
+        unzip -q -d $dir $dir/op.zip
+
+        if [ $? -ne 0 ]; then
+            do_fatal "cannot unzip 1password cli package"
+        fi
+
+        dot_install \
+            -o root \
+            -g wheel \
+            -m 0755 \
+            $dir/op /usr/local/bin/op
+    fi
+}
+
+dot_pacman_install ca-certificates
+
+#
+# Server X
+#
+dot_pacman_install xorg-server
+dot_pacman_install xbindkeys
+dot_pacman_install xorg-xbacklight
+dot_pacman_install noto-fonts
+dot_pacman_install i3-wm
+dot_mkdir /.config/i3
+dot_install i3config /home/gearnode/.config/i3/config
+dot_install xinitrc /home/gearnode/.xinitrc
+dot_install xbindkeysrc /home/gearnode/.xbindkeysrc
+dot_install Xdefaults /home/gearnode/.Xdefaults
+
+#
+# Audio
+#
+dot_pacman_install pavucontrol
+dot_pacman_install sof-firmware
+
+#
+# Network
+#
+dot_pacman_install net-tools
+dot_pacman_install networkmanager
+
+#
+# OpenSSH
+#
+dot_pacman_install openssh
+dot_mkdir -m 0700 -o gearnode -g gearnode /home/gearnode/.ssh
+dot_install ssh/config /home/gearnode/.ssh/config
+
+#
+# Git
+#
+dot_pacman_install git
+dot_install gitconfig /home/gearnode/.gitconfig
+dot_install gitignore /home/gearnode/.gitignore
+
+#
+# ZSH
+#
+dot_pacman_install zsh
+dot_pacman_install zsh-completions
+dot_pacman_install fzf
+dot_install zshrc /home/gearnode/.zshrc
+dot_chsh /usr/bin/zsh gearnode
+
+#
+# cURL
+#
+dot_pacman_install curl
+dot_install curlrc /home/gearnode/.curlrc
+
+# Ag
+dot_pacman_install the_silver_searcher
+dot_install agignore /home/gearnode/.agignore
+
+#
+# VIM
+#
+dot_pacman_install vim
+# TODO: install vim configuration
+
+#
+# Emacs
+#
+dot_pacman_install emacs
+# TODO: install emacs configuration
+
+#
+# Mutt
+#
+dot_pacman_install mutt
+dot_pacman_install lynx
+# TODO: install mutt configuration
+
+#
+# Go
+#
+dot_pacman_install go
+dot_go_install github.com/jobteaser/privatebin
+
+#
+# Ruby
+#
+dot_pacman_install ruby
+dot_install irbrc /home/gearnode/.irbrc
+
+#
+# Erlang
+#
+dot_pacman_install erlang
+
+#
+# Python3
+#
+dot_pacman_install python3
+
+#
+# HTOP
+#
+dot_pacman_install htop
+dot_mkdir /home/gearnode/.config/htop
+dot_install htoprc /home/gearnode/.config/htop/htoprc
+
+#
+# Wireshark
+#
+dot_pacman_install wireshark-qt
+dot_pacman_install wireshark-cli
+dot_pacman_install mitmproxy
+
+dot_pacman_install openssl
+dot_pacman_install bat
+dot_pacman_install unzip
+dot_pacman_install jq
+dot_pacman_install wget
+
+dot_pacman_install firefox
+dot_pacman_install docker
+dot_pacman_install ctags
+dot_pacman_install sqlite
+dot_pacman_install make
+dot_pacman_install feh
+dot_pacman_install tree
+dot_pacman_install bc
+dot_pacman_install tarsnap
+
+dot_pacman_install postgresql
+dot_pacman_install redis
+
+#
+# 1Password
+#
+dot_install_1password 1.4.0
