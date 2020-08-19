@@ -15,14 +15,14 @@ bindsym $mod+space exec dmenu_run
 bindsym $mod+f fullscreen toggle
 
 # drag floatting windows
-floatting_modifier $mod
+floating_modifier $mod
 
 # toggle tiling / floatting
-bindsym $mod+Shift+space
+bindsym $mod+Shift+space floating toggle
 
 # split
-bindsym $mod+-
-bindsym $mod+\
+bindsym $mod+- split h
+bindsym $mod+\ split v
 
 # change focussed window
 bindsym $mod+h focus left
