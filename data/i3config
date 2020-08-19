@@ -21,8 +21,8 @@ floating_modifier $mod
 bindsym $mod+Shift+space floating toggle
 
 # split
-bindsym $mod+- split h
-bindsym $mod+\ split v
+bindsym $mod+minus split v
+bindsym $mod+backslash split h
 
 # change focussed window
 bindsym $mod+h focus left
