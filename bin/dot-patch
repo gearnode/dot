@@ -265,6 +265,39 @@ dot_install_1password() {
     fi
 }
 
+dot_install_rebar3() {
+    if [ $# -lt 1 ]; then
+        dot_fatal "missing argument"
+    fi
+
+    local version
+    version="$1"
+
+    command -v rebar3 > /dev/null
+    if [ $? -ne 0 -o "$(rebar3 --version | cut -d' ' -f 2)" != "$version" ]; then
+        dot_trace "installing 'rebar3' package"
+
+        local dir
+        dir=$(mktemp -d)
+
+        curl \
+            --location \
+            --silent \
+            --output $dir/rebar3 \
+            "https://github.com/erlang/rebar3/releases/download/$version/rebar3"
+
+        if [ $? -ne 0 ]; then
+            dot_fatal "cannot download rebar3 package"
+        fi
+
+        dot_install \
+            -o root \
+            -g wheel \
+            -m 0755 \
+            $dir/rebar3 /usr/local/bin/rebar3
+
+    fi
+}
 
 usage() {
     cat <<EOF

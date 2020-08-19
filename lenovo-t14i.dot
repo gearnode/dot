@@ -95,6 +95,7 @@ dot_install gemrc /home/gearnode/.gemrc
 # Erlang
 #
 dot_pacman_install erlang
+dot_install_rebar3 3.13.2
 
 #
 # Python3
