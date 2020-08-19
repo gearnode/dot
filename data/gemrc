@@ -1,0 +1,5 @@
+gem: --no-document --no-suggestions
+benchmark: false
+verbose: false
+update_source: true
+backtrace: true

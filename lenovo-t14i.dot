@@ -89,6 +89,7 @@ dot_go_install github.com/jobteaser/privatebin
 #
 dot_pacman_install ruby
 dot_install irbrc /home/gearnode/.irbrc
+dot_install gemrc /home/gearnode/.gemrc
 
 #
 # Erlang
